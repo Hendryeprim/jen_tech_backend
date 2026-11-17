@@ -11,24 +11,53 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configure CORS (always allow same-origin requests so static module scripts work in production)
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', `http://localhost:${PORT}`];
+// Configure CORS (production domains + local development)
+const defaultOrigins = [
+  'https://jentech.co.in',
+  'https://www.jentech.co.in',
+  'http://jentech.co.in',
+  'http://www.jentech.co.in',
+  'https://api.jentech.co.in',
+  'http://api.jentech.co.in',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  `http://localhost:${PORT}`,
+];
+
+const envOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim().replace(/\/$/, ''))
+  : [];
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  const cleanOrigin = origin.replace(/\/$/, '');
+  if (allowedOrigins.includes(cleanOrigin)) return true;
+  try {
+    const url = new URL(cleanOrigin);
+    if (url.hostname === 'jentech.co.in' || url.hostname.endsWith('.jentech.co.in')) {
+      return true;
+    }
+  } catch (err) {}
+  return false;
+}
 
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
   const hostOrigin = req.headers.host ? `${req.protocol}://${req.headers.host}` : null;
   cors({
     origin: (reqOrigin, callback) => {
       if (!reqOrigin) return callback(null, true);
       if (hostOrigin && reqOrigin === hostOrigin) return callback(null, true);
-      if (allowedOrigins.includes(reqOrigin) || process.env.NODE_ENV !== 'production') {
+      if (isOriginAllowed(reqOrigin) || process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
-      return callback(new Error('CORS policy: Not allowed by CORS'));
+      return callback(new Error(`CORS policy: Origin ${reqOrigin} not allowed`));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   })(req, res, next);
 });
 

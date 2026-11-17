@@ -28,8 +28,8 @@ async function runSeed() {
           '33',
           '600058',
           '+91 98400 12345',
-          'sales@jentech.com',
-          'www.jentech.com',
+          'sales@jentech.co.in',
+          'www.jentech.co.in',
           '33AABCT1332M1Z0',
           'AABCT1332M',
           'HDFC Bank',
@@ -48,23 +48,29 @@ async function runSeed() {
     }
 
     // 2. Users
-    console.log('[Seed] Seeding Users...');
+    console.log('[Seed] Seeding Users (Admin & Staff)...');
+    const managerEmail = process.env.MANAGER_EMAIL || 'manager@jentech.com';
+    const managerPassword = process.env.MANAGER_PASSWORD || 'JenTech@2026Mgr';
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@jentech.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'JenTech@2026Admin';
+    const staffEmail = process.env.STAFF_EMAIL || 'staff@jentech.com';
+    const staffPassword = process.env.STAFF_PASSWORD || 'JenTech@2026Staff';
+
+    const managerPasswordHash = await bcrypt.hash(managerPassword, 10);
     const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
-    const staffPasswordHash = await bcrypt.hash(process.env.STAFF_PASSWORD || 'JenTech@2026Staff', 10);
-    const managerPasswordHash = await bcrypt.hash(process.env.MANAGER_PASSWORD || 'JenTech@2026Mgr', 10);
+    const staffPasswordHash = await bcrypt.hash(staffPassword, 10);
 
     await client.query(`
-      INSERT INTO users (name, email, password_hash, role)
+      INSERT INTO users (name, email, password_hash, role, is_active)
       VALUES 
-        ('Admin User', $4, $1, 'admin'),
-        ('Billing Staff', 'staff@jentech.com', $2, 'billing_staff'),
-        ('Operations Manager', 'manager@jentech.com', $3, 'manager')
+        ('Operations Manager', $1, $2, 'admin', true),
+        ('Admin User', $3, $4, 'admin', true),
+        ('Billing Staff', $5, $6, 'billing_staff', true)
       ON CONFLICT (email) DO UPDATE SET 
         password_hash = EXCLUDED.password_hash,
-        role = EXCLUDED.role
-    `, [adminPasswordHash, staffPasswordHash, managerPasswordHash, adminEmail]);
+        role = EXCLUDED.role,
+        is_active = true
+    `, [managerEmail, managerPasswordHash, adminEmail, adminPasswordHash, staffEmail, staffPasswordHash]);
 
     // 3. Product Categories & Door/Window Models (6 Exact Windows from Notebook)
     console.log('[Seed] Seeding Window Models (6 Exact Windows)...');

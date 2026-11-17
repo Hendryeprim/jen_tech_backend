@@ -9,6 +9,8 @@
     "db:migrate": "node src/database/migrate.js",
     "db:seed": "node src/database/seed.js",
     "db:setup": "node src/database/migrate.js && node src/database/seed.js",
+    "seed:admin": "node src/database/seedUsers.js",
+    "seed:users": "node src/database/seedUsers.js",
     "test": "node --test tests/**/*.test.js"
   },
   "keywords": [
